@@ -1,0 +1,14 @@
+services:
+  font-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: font-demo
+    # Mount ./output ke container agar hasil render bisa diakses dari host
+    volumes:
+      - ./output:/app/output
+    environment:
+      - WINEARCH=win64
+      - WINEPREFIX=/root/.wine
+    # Jalankan sekali lalu exit (bukan server yang terus berjalan)
+    restart: "no"
