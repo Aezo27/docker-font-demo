@@ -114,6 +114,22 @@ run_wine() {
 run_wine "Inter"    'Z:\app\output\wine_inter.bmp'
 run_wine "Segoe UI" 'Z:\app\output\wine_segoeui.bmp'
 
+# ── 5b. Render C# RDLC / Microsoft.Reporting.NETCore (via Wine) ──────────────
+banner "Step 5b: Render Teks — C# RDLC (Microsoft.Reporting.NETCore via Wine)"
+echo "Menjalankan ReportRenderer.exe di bawah Wine..."
+echo "  Mirrors production: DISPLAY=:99 wine64 dotnet Siloam.PaymentSystem.Report.dll"
+echo "  Dikompilasi dengan: dotnet publish -r win-x64 --self-contained"
+echo "  Menggunakan: Microsoft.Reporting.NETCore | LocalReport.Render(\"PDF\")"
+  echo "  RDL: Reports/testing.rdl (embedded resource)"
+echo ""
+
+# Output: PDF (bisa langsung dibuka dari volume mount ./output/)
+if WINEDEBUG=-all wine /app/rdlc_publish/ReportRenderer.exe 'Z:\app\output\rdlc_output.pdf'; then
+    echo "  [OK]"
+else
+    echo "  [WARN] ReportRenderer exited non-zero"
+fi
+
 # ── 6. Verifikasi & Convert BMP → PNG ─────────────────────────────────────────
 banner "Step 6: Verifikasi & Konversi Output"
 python3 /app/src/verify_fonts.py
@@ -128,9 +144,14 @@ echo "  Render dari Debian (Pillow):"
 echo "    debian_inter.png     ← Inter dirender oleh Pillow di Linux"
 echo "    debian_segoeui.png   ← Segoe UI dirender oleh Pillow di Linux"
 echo ""
-echo "  Render dari Wine (GDI+):"
-echo "    wine_inter.bmp/png   ← Inter dirender oleh Wine GDI"
-echo "    wine_segoeui.bmp/png ← Segoe UI dirender oleh Wine GDI"
+echo "  Render dari Wine (C GDI via MinGW EXE):"
+echo "    wine_inter.bmp/png   ← Inter dirender oleh Wine GDI (C)"
+echo "    wine_segoeui.bmp/png ← Segoe UI dirender oleh Wine GDI (C)"
+echo ""
+  echo "  Render dari C# RDLC (Microsoft.Reporting via Wine):"
+  echo "    rdlc_output.pdf      ← testing.rdl dirender menjadi PDF"
+  echo ""
+echo "    (buka PDF langsung dari ./output/ — font aktual tampak di dalam PDF)"
 echo ""
 echo "  Buka file PNG untuk melihat:"
 echo "    • Status bar HIJAU  = font ditemukan dan digunakan dengan benar"

@@ -28,6 +28,17 @@ RUN dpkg --add-architecture i386 && \
         ca-certificates file \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Install .NET SDK 8.0 (untuk kompilasi C# → Windows EXE via dotnet publish) ─
+# Diperlukan untuk cross-compile src/FontRenderer/ targeting win-x64
+RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \
+         -O /tmp/ms-prod.deb && \
+    dpkg -i /tmp/ms-prod.deb && \
+    rm /tmp/ms-prod.deb && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends dotnet-sdk-6.0 && \
+    rm -rf /var/lib/apt/lists/* && \
+    dotnet --version
+
 # ── Python dependencies ────────────────────────────────────────────────────────
 RUN pip3 install Pillow --break-system-packages
 
@@ -90,6 +101,20 @@ RUN x86_64-w64-mingw32-gcc \
         -static && \
     echo "EXE berhasil dikompilasi:" && \
     file /app/render_wine.exe
+
+# ── Compile C# RDLC project → Windows EXE (win-x64, dijalankan via Wine) ────
+# Mirrors production setup: "wine64 dotnet Siloam.PaymentSystem.Report.dll"
+# Menggunakan Microsoft.Reporting.NETCore untuk render RDLC → PDF
+RUN dotnet publish /app/src/ReportRenderer/ReportRenderer.csproj \
+        -c Release \
+        -r win-x64 \
+        --self-contained true \
+        -o /app/rdlc_publish \
+        --nologo \
+        -p:DebugType=None \
+        -p:DebugSymbols=false && \
+    echo "RDLC EXE berhasil dibuild:" && \
+    file /app/rdlc_publish/ReportRenderer.exe
 
 RUN mkdir -p /app/output
 

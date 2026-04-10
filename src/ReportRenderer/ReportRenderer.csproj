@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Target win-x64: dijalankan via "wine ReportRenderer.exe" di Debian          -->
+    <!-- Mirrors setup production: "wine64 dotnet Siloam.PaymentSystem.Report.dll"   -->
+    <TargetFramework>net6.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ReportRenderer</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <!-- Tidak single-file: embedded resource (RDLC) tetap dalam assembly -->
+    <PublishSingleFile>false</PublishSingleFile>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ReportViewerCore.NETCore: drop-in replacement untuk Microsoft.Reporting.NETCore -->
+    <!-- Namespace sama persis: using Microsoft.Reporting.NETCore; LocalReport, dll    -->
+    <PackageReference Include="ReportViewerCore.NETCore" Version="15.1.19" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- RDL file di-embed ke assembly -->
+    <EmbeddedResource Include="Reports\testing.rdl" />
+  </ItemGroup>
+
+</Project>
