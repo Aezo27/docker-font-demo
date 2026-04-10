@@ -1,15 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Target win-x64: dijalankan via "wine ReportRenderer.exe" di Debian          -->
-    <!-- Mirrors setup production: "wine64 dotnet Siloam.PaymentSystem.Report.dll"   -->
+    <!-- Framework-dependent: dijalankan via "wine64 C:\dotnet\dotnet.exe ReportRenderer.dll" -->
+    <!-- Mirrors production: wine64 dotnet Siloam.PaymentSystem.Report.dll               -->
+    <!-- Windows .NET runtime di Wine menyediakan usp10.dll (Uniscribe) untuk PDF layout  -->
     <TargetFramework>net6.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <AssemblyName>ReportRenderer</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <SelfContained>true</SelfContained>
     <!-- Tidak single-file: embedded resource (RDLC) tetap dalam assembly -->
     <PublishSingleFile>false</PublishSingleFile>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>

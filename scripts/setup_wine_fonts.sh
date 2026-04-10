@@ -6,6 +6,10 @@
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 set -euo pipefail
 
+# Pastikan DISPLAY tersedia untuk wine regedit
+: "${DISPLAY:=:99}"
+export DISPLAY
+
 WINE_FONTS_DIR="${WINEPREFIX:-/root/.wine}/drive_c/windows/Fonts"
 REG_FILE="/tmp/wine_font_registration.reg"
 COPIED=0
@@ -111,6 +115,7 @@ if [ "$COPIED" -gt 0 ]; then
     echo ""
     echo "Mengimport $COPIED font ke Wine registry..."
     WINEDEBUG=-all wine regedit "$REG_FILE" 2>/dev/null
+    wineserver --wait 2>/dev/null || true
     echo "[OK] Registry berhasil diupdate"
 else
     echo ""

@@ -20,12 +20,13 @@ ENV WINEPREFIX=/root/.wine
 # python3    : Untuk rendering Debian-side
 RUN dpkg --add-architecture i386 && \
     apt-get update && apt-get install -y --no-install-recommends \
-        wine wine64 \
+        wine wine64 wine32:i386 \
         gcc-mingw-w64-x86-64 \
         fontconfig \
         python3 python3-pip \
         wget curl unzip xvfb \
         ca-certificates file \
+        libgdiplus \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install winetricks dari GitHub (tidak tersedia di Debian bookworm apt) ─────
@@ -86,6 +87,34 @@ RUN fc-cache -fv && \
     echo "=== Verifikasi font terinstall ===" && \
     fc-list | grep -i -E "inter|segoe" | sort
 
+# ── Pre-configure Wine: init prefix + gdiplus + font registration ──────────────
+# Dilakukan saat BUILD agar container tidak bergantung pada jaringan untuk gdiplus
+# di runtime. gdiplus dari Microsoft wajib ada agar rendering GDI+ tidak crash.
+RUN Xvfb :99 -screen 0 1024x768x24 -ac 2>/dev/null & \
+    XVFB_PID=$! && \
+    sleep 3 && \
+    DISPLAY=:99 WINEDLLOVERRIDES="mscoree,mshtml=" WINEDEBUG=-all \
+        wine wineboot --init 2>/dev/null && \
+    sleep 3 && \
+    echo "[Build] Wine prefix diinisialisasi" && \
+    DISPLAY=:99 WINEDEBUG=-all winetricks -q gdiplus 2>/dev/null \
+        && echo "[Build] gdiplus diinstall" \
+        || echo "[Build] WARN: winetricks gdiplus gagal (akan dicoba ulang saat runtime)" && \
+    WINE_FONTS="${WINEPREFIX}/drive_c/windows/Fonts" && \
+    mkdir -p "$WINE_FONTS" && \
+    find /usr/share/fonts/truetype/inter -name "*.ttf" \
+         -exec cp {} "$WINE_FONTS/" \; 2>/dev/null || true && \
+    find /usr/share/fonts/truetype/segoe -name "*.ttf" \
+         -exec cp {} "$WINE_FONTS/" \; 2>/dev/null || true && \
+    echo "[Build] Font di Wine/Fonts: $(ls "$WINE_FONTS"/*.ttf 2>/dev/null | wc -l) file" && \
+    printf 'Windows Registry Editor Version 5.00\n\n[HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts]\n"Inter (TrueType)"="Inter-Regular.ttf"\n"Inter Bold (TrueType)"="Inter-Bold.ttf"\n"Inter SemiBold (TrueType)"="Inter-SemiBold.ttf"\n"Inter Medium (TrueType)"="Inter-Medium.ttf"\n"Segoe UI (TrueType)"="segoeui.ttf"\n"Segoe UI Bold (TrueType)"="segoeuib.ttf"\n"Segoe UI Italic (TrueType)"="segoeuii.ttf"\n' \
+         > /tmp/fonts_build.reg && \
+    DISPLAY=:99 WINEDEBUG=-all wine regedit /tmp/fonts_build.reg 2>/dev/null && \
+    wineserver --wait 2>/dev/null || true && \
+    echo "[Build] Registry font diupdate ($(grep -c TrueType /tmp/fonts_build.reg) entries)" && \
+    wineserver --kill 2>/dev/null || true && \
+    kill "$XVFB_PID" 2>/dev/null || true
+
 # ── Copy source files ──────────────────────────────────────────────────────────
 WORKDIR /app
 COPY src/   /app/src/
@@ -107,19 +136,32 @@ RUN x86_64-w64-mingw32-gcc \
     echo "EXE berhasil dikompilasi:" && \
     file /app/render_wine.exe
 
-# ── Compile C# RDLC project → Windows EXE (win-x64, dijalankan via Wine) ────
-# Mirrors production setup: "wine64 dotnet Siloam.PaymentSystem.Report.dll"
-# Menggunakan Microsoft.Reporting.NETCore untuk render RDLC → PDF
+# ── Download Windows .NET 6 Runtime ke Wine prefix ──────────────────────────
+# Mirrors production: "wine64 dotnet Siloam.PaymentSystem.Report.dll"
+# Wine menyediakan usp10.dll (Uniscribe) yang diperlukan ReportViewerCore.NETCore
+# untuk text measurement saat render PDF. Self-contained win-x64 tidak bisa
+# dipakai karena Wine's built-in gdiplus crash; framework-dependent + Windows
+# .NET runtime adalah satu-satunya workaround resmi (github.com/lkosson/reportviewercore#144)
+RUN mkdir -p "${WINEPREFIX}/drive_c/dotnet" && \
+    wget -q "https://dotnetcli.azureedge.net/dotnet/Runtime/6.0.36/dotnet-runtime-6.0.36-win-x64.zip" \
+         -O /tmp/dotnet-win.zip && \
+    unzip -q /tmp/dotnet-win.zip -d "${WINEPREFIX}/drive_c/dotnet" && \
+    rm /tmp/dotnet-win.zip && \
+    echo "[Build] Windows .NET 6 runtime di Wine:" && \
+    ls "${WINEPREFIX}/drive_c/dotnet/dotnet.exe" && echo "  dotnet.exe OK"
+
+# ── Build C# RDLC → framework-dependent DLL (dijalankan via wine64 dotnet.exe) ─
+# Framework-dependent: tidak bundel runtime, DLL adalah .NET IL murni.
+# Dijalankan: wine64 C:\dotnet\dotnet.exe Z:\app\rdlc_win\ReportRenderer.dll
 RUN dotnet publish /app/src/ReportRenderer/ReportRenderer.csproj \
         -c Release \
-        -r win-x64 \
-        --self-contained true \
-        -o /app/rdlc_publish \
+        --self-contained false \
+        -o /app/rdlc_win \
         --nologo \
         -p:DebugType=None \
         -p:DebugSymbols=false && \
-    echo "RDLC EXE berhasil dibuild:" && \
-    file /app/rdlc_publish/ReportRenderer.exe
+    echo "RDLC DLL berhasil dibuild:" && \
+    ls -lh /app/rdlc_win/ReportRenderer.dll
 
 RUN mkdir -p /app/output
 
