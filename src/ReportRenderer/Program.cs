@@ -25,7 +25,21 @@ class Program
         Console.WriteLine("  C# Microsoft RDLC Font Renderer");
         Console.WriteLine("========================================");
 
-        string outputPath = "demo_report.pdf"; // Default output untuk demo mode
+        string outputPath;
+
+        if (args.Length >= 1)
+        {
+            // Path eksplisit dari CLI / Docker entrypoint
+            // Contoh: wine ReportRenderer.exe 'Z:\app\output\rdlc_output.pdf'
+            outputPath = args[0];
+        }
+        else
+        {
+            
+
+            outputPath = "Reports/demo_report.pdf";
+            Console.WriteLine($"  [Demo] Output file: {outputPath}");
+        }
 
         return RenderAndSave(outputPath) ? 0 : 1;
     }

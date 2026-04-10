@@ -19,7 +19,7 @@
     <ReportSection>
       <Body>
         <ReportItems>
-          <!-- <Textbox Name="Textbox1">
+          <Textbox Name="Textbox1">
             <rd:DefaultName>Textbox1</rd:DefaultName>
             <CanGrow>true</CanGrow>
             <KeepTogether>true</KeepTogether>
@@ -50,7 +50,7 @@
               <PaddingTop>2pt</PaddingTop>
               <PaddingBottom>2pt</PaddingBottom>
             </Style>
-          </Textbox> -->
+          </Textbox>
           <Textbox Name="Textbox2">
             <rd:DefaultName>Textbox1</rd:DefaultName>
             <CanGrow>true</CanGrow>
