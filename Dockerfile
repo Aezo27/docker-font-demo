@@ -28,6 +28,11 @@ RUN dpkg --add-architecture i386 && \
         ca-certificates file \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Install winetricks dari GitHub (tidak tersedia di Debian bookworm apt) ─────
+RUN wget -q https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks \
+         -O /usr/local/bin/winetricks && \
+    chmod +x /usr/local/bin/winetricks
+
 # ── Install .NET SDK 8.0 (untuk kompilasi C# → Windows EXE via dotnet publish) ─
 # Diperlukan untuk cross-compile src/FontRenderer/ targeting win-x64
 RUN wget -q https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb \

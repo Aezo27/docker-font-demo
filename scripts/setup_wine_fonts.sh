@@ -50,10 +50,28 @@ copy_fonts_from_dir() {
         # Copy ke Wine/Fonts
         cp "$ttf_file" "$WINE_FONTS_DIR/$basename"
 
-        # Buat registry entry:
-        # Contoh: "Inter Regular (TrueType)"="Inter-Regular.ttf"
-        local font_display
-        font_display=$(echo "${basename%.*}" | sed 's/[-_]/ /g')
+        # Buat registry entry menggunakan nama font internal (dari fc-query),
+        # bukan nama file — supaya GDI bisa menemukan font lewat family name-nya.
+        # Contoh: segoeui.ttf → "Segoe UI (TrueType)"="segoeui.ttf"
+        #         Inter-Regular.ttf → "Inter (TrueType)"="Inter-Regular.ttf"
+        local font_family font_style font_display
+        font_family=$(fc-query --format="%{family}\n" "$ttf_file" 2>/dev/null \
+                      | head -1 | cut -d',' -f1 | xargs)
+        font_style=$(fc-query --format="%{style}\n" "$ttf_file" 2>/dev/null \
+                     | head -1 | cut -d',' -f1 | xargs)
+
+        if [ -n "$font_family" ]; then
+            # Regular/Book tidak perlu suffix style di registry key
+            if [ "$font_style" = "Regular" ] || [ "$font_style" = "Book" ] \
+               || [ -z "$font_style" ]; then
+                font_display="$font_family"
+            else
+                font_display="$font_family $font_style"
+            fi
+        else
+            # Fallback ke nama file jika fc-query gagal
+            font_display=$(echo "${basename%.*}" | sed 's/[-_]/ /g')
+        fi
         printf '"%s (TrueType)"="%s"\n' "$font_display" "$basename" >> "$REG_FILE"
 
         echo "  [COPY] $basename"

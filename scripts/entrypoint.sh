@@ -67,6 +67,14 @@ sleep 3
 echo "[OK] Wine diinisialisasi"
 echo "     Wine version: $(WINEDEBUG=-all wine --version 2>/dev/null || echo 'unknown')"
 
+# ── Install gdiplus asli Microsoft via winetricks ─────────────────────────────
+# Wine built-in gdiplus.dll tidak stabil untuk GDI+ rendering (SEHException).
+# winetricks mendownload dan menginstall gdiplus.dll resmi dari Microsoft.
+echo "Menginstall gdiplus via winetricks (diperlukan untuk font rendering)..."
+WINEDEBUG=-all DISPLAY=:99 winetricks -q gdiplus 2>/dev/null \
+    && echo "[OK] gdiplus diinstall" \
+    || echo "[WARN] winetricks gdiplus gagal — lanjut tanpa override"
+
 # ── 3. Font Setup: Debian → Wine ──────────────────────────────────────────────
 banner "Step 3: Sinkronisasi Font Debian → Wine"
 echo "Menyalin font dari /usr/share/fonts/ ke Wine dan mendaftarkannya..."
